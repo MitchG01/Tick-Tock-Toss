@@ -54,7 +54,7 @@ public class PlayerController : MonoBehaviourPun
             return;
 
         Look();  // Handle camera look/rotation.
-        Move();  // Handle player movement.
+        ProcessMovementInput();  // Handle player movement.
         Jump();  // Handle player jumping.
 
         for (int i = 0; i < items.Length; i++)
@@ -75,29 +75,16 @@ public class PlayerController : MonoBehaviourPun
 
     void Look()
     {
-        // Rotate the player based on mouse input.
-        transform.Rotate(Vector3.up * Input.GetAxisRaw("Mouse X") * mouseSensitivity);
+        // Horizontal rotation using Rigidbody
+        float mouseX = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
+        Quaternion newRot = Quaternion.Euler(0f, mouseX, 0f);
+        rb.MoveRotation(rb.rotation * newRot);
 
-        // Adjust the vertical camera rotation and clamp it.
+        // Vertical rotation
         verticalLookRotation += Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
         verticalLookRotation = Mathf.Clamp(verticalLookRotation, -10f, 10f);
 
-        // Apply the vertical camera rotation to the camera holder.
         cameraHolder.transform.localEulerAngles = Vector3.left * verticalLookRotation;
-    }
-
-    [PunRPC]
-    void Move()
-    {
-        // Calculate the player's movement direction based on input.
-        Vector3 moveDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical")).normalized;
-
-        // Apply sprint or walk speed based on left shift key.
-        moveAmount = Vector3.SmoothDamp(moveAmount, moveDir * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed), ref smoothMoveVelocity, smoothTime);
-
-        // Determine if the player is walking.
-        bool isWalking = moveDir.magnitude > 0;
-        playerAnimator.SetBool("walk", isWalking);
     }
 
     void Jump()
@@ -107,6 +94,24 @@ public class PlayerController : MonoBehaviourPun
         {
             rb.AddForce(transform.up * jumpForce);  // Apply an upward force for jumping.
         }
+    }
+
+    void ProcessMovementInput()
+    {
+        // Read input for movement
+        Vector3 moveDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical")).normalized;
+
+        // Smooth the movement direction
+        moveAmount = Vector3.SmoothDamp(
+            moveAmount,
+            moveDir * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed),
+            ref smoothMoveVelocity,
+            smoothTime
+        );
+
+        // Animation
+        bool isWalking = moveDir.magnitude > 0;
+        playerAnimator.SetBool("walk", isWalking);
     }
 
     void EquipItem(int _index)

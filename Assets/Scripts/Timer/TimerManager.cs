@@ -114,15 +114,16 @@ public class TimerManager : MonoBehaviourPunCallbacks
 
     void SetTimer (float timerValue, bool local)
     {
+        if (!PhotonNetwork.InRoom) return;
+
         if (local)
         {
-            // Micro wrote this, yes it's weird. This sends an RPC to yourself only. There are better ways to approach this, but this should work fine.
             photonView.RPC(nameof(RPC_SetTimer), PhotonNetwork.LocalPlayer, timerValue);
             return;
         }
 
-        if (!PhotonNetwork.IsMasterClient)
-            return;
+        if (!PhotonNetwork.InRoom) return;
+        if (!PhotonNetwork.IsMasterClient) return;
 
         photonView.RPC(nameof(RPC_SetTimer), RpcTarget.All, timerValue); // Call RPC_SetTimer on everyone. This makes the timer syncing logic the same for all players.
     }
@@ -135,13 +136,14 @@ public class TimerManager : MonoBehaviourPunCallbacks
 
     void SetTarget (int targetActorNumber)
     {
-        if (!PhotonNetwork.IsMasterClient)
-            return;
+        if(!PhotonNetwork.InRoom) return;
+        if (!PhotonNetwork.IsMasterClient) return;
 
         // Don't set the target or send the message that the target has been set, if the target was changed recently.
         if (Time.time < lastTargetChange + timerPassCooldown)
             return;
 
+        if (!PhotonNetwork.InRoom) return;
         photonView.RPC(nameof(RPC_SetTarget), RpcTarget.All, targetActorNumber);
     }
 
@@ -216,53 +218,4 @@ public class TimerManager : MonoBehaviourPunCallbacks
 
     #endregion
 
-    /* OLD CODE
-     * void Start()
-    {
-        // Check if this is the master client to avoid conflicts.
-        if (PhotonNetwork.IsMasterClient)
-        {
-            // Get a list of all players in the current room.
-            Player[] allPlayers = PhotonNetwork.PlayerList;
-
-            // Choose a random player in the room.
-            if (allPlayers.Length > 0)
-            {
-                int randomIndex = Random.Range(0, allPlayers.Length);
-                Player randomPlayer = allPlayers[randomIndex];
-
-                // Check if this player is the local player.
-                if (randomPlayer == PhotonNetwork.LocalPlayer)
-                {
-                    // Instantiate the timer prefab for the randomly selected player.
-                    InstantiateTimerAbovePlayer(randomPlayer);
-                }
-            }
-        }
-    }
-
-    public void InstantiateTimerAbovePlayer(Player player)
-    {
-        if (player == null)
-        {
-            Debug.LogWarning("Player reference is null. Cannot instantiate timer.");
-            return;
-        }
-
-        GameObject playerGameObject = PhotonView.Find(player.ActorNumber).gameObject;
-        if (playerGameObject == null)
-        {
-            Debug.LogWarning("Player GameObject not found. Cannot instantiate timer.");
-            return;
-        }
-
-        // Calculate the position above the player's head.
-        Vector3 playerPosition = playerGameObject.transform.position;
-        float heightAboveHead = 2.0f; // Adjust this value as needed.
-        Vector3 timerPosition = new Vector3(playerPosition.x, playerPosition.y + heightAboveHead, playerPosition.z);
-
-        // Instantiate the timer prefab at the calculated position with no rotation.
-        PhotonNetwork.Instantiate("TimerPrefab", timerPosition, Quaternion.identity);
-        Debug.Log("Timer Display Instantiated above the player's head at " + timerPosition);
-    }*/
 }
